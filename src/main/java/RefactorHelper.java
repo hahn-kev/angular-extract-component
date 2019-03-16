@@ -19,34 +19,75 @@ import org.angular2.lang.html.psi.Angular2HtmlRecursiveElementVisitor;
 import org.angular2.lang.html.psi.impl.Angular2HtmlBananaBoxBindingImpl;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class RefactorHelper {
     private final Project project;
-    private final PsiElement rootElement;
+    private final PsiElement[] rootElements;
 
     public RefactorHelper(Project project, PsiElement rootElement) {
-
         this.project = project;
-        this.rootElement = rootElement;
+        this.rootElements = rootElement == null ? new PsiElement[0] : new PsiElement[]{rootElement};
+    }
+
+    public RefactorHelper(Project project, PsiElement[] rootElements) {
+        this.project = project;
+        this.rootElements = rootElements;
     }
 
     public void DoRefactor() {
-        if (rootElement == null) return;
+        if (rootElements.length == 0) return;
         String componentName = Messages.showInputDialog(project, "Component name", "Component Name", Messages.getQuestionIcon(), "test", null);
         if (componentName == null) return;
 
-        PsiFile containingFile = rootElement.getContainingFile();
+        PsiFile containingFile = rootElements[0].getContainingFile();
         PsiDirectory containingDirectory = containingFile.getContainingDirectory();
-        PsiElement elementNew = rootElement.copy();
 
         Set<AngularBinding> bindings = new HashSet<>();
 
         Set<AngularEvent> actions = new HashSet<>();
+        List<PsiElement> newElements = new ArrayList<>();
 
+        for (PsiElement rootElement : rootElements) {
+            PsiElement elementNew = rootElement.copy();
+            newElements.add(elementNew);
+            VisitElement(elementNew, bindings, actions);
+        }
+
+
+        StringBuilder htmlBuilder = InvokeTemplate(componentName, bindings, actions);
+        CleanupOtherElements();
+        rootElements[0].replace(XmlElementFactory.getInstance(project).createTagFromText(htmlBuilder.toString(), Angular2HtmlLanguage.INSTANCE));
+
+        StringBuilder jsBuilder = RenderComponentJs(componentName, bindings, actions);
+        PsiFile newTs = PsiFileFactory.getInstance(project).createFileFromText(componentName + ".component.ts", TypeScriptFileType.INSTANCE, jsBuilder.toString());
+        containingDirectory.add(newTs);
+
+        String componentHtml = RenderComponentHtml(newElements, bindings, actions);
+        PsiFile newHtml = PsiFileFactory.getInstance(project)
+                .createFileFromText(componentName + ".component.html", Angular2HtmlLanguage.INSTANCE, componentHtml);
+        containingDirectory.add(newHtml);
+
+        CodeStyleManager.getInstance(project).reformat(newHtml);
+        CodeStyleManager.getInstance(project).reformat(newTs);
+        Module module = ModuleUtil.findModuleForFile(containingFile);
+        if (module != null) {
+            ModuleRootModificationUtil.addContentRoot(module, newHtml.getVirtualFile());
+            ModuleRootModificationUtil.addContentRoot(module, containingDirectory.getVirtualFile().getPath() + "\\" + newTs.getName());
+        }
+        VirtualFileManager.getInstance().asyncRefresh(null);
+    }
+
+    private void CleanupOtherElements() {
+        if (rootElements.length == 1) return;
+        PsiElement secondElement = rootElements[0].getNextSibling();
+        PsiElement lastElement = rootElements[rootElements.length - 1];
+        secondElement.getParent().deleteChildRange(secondElement, lastElement);
+    }
+
+    private void VisitElement(PsiElement elementNew, Set<AngularBinding> bindings, Set<AngularEvent> actions) {
         elementNew.acceptChildren(new Angular2HtmlRecursiveElementVisitor() {
             @Override
             public void visitBananaBoxBinding(Angular2HtmlBananaBoxBindingImpl bananaBoxBinding) {
@@ -75,7 +116,7 @@ public class RefactorHelper {
 
 //            @Override
 //            public void visitReference(Angular2HtmlReference reference) {
-                //do something with html references the #name kind
+            //do something with html references the #name kind
 //            }
 //
 //            @Override
@@ -106,28 +147,6 @@ public class RefactorHelper {
                 bindings.add(new AngularBinding(templateBinding, false));
             }
         });
-
-
-        StringBuilder htmlBuilder = InvokeTemplate(componentName, bindings, actions);
-        rootElement.replace(XmlElementFactory.getInstance(project).createTagFromText(htmlBuilder.toString(), Angular2HtmlLanguage.INSTANCE));
-
-        StringBuilder jsBuilder = RenderComponentJs(componentName, bindings, actions);
-        PsiFile newTs = PsiFileFactory.getInstance(project).createFileFromText(componentName + ".component.ts", TypeScriptFileType.INSTANCE, jsBuilder.toString());
-        containingDirectory.add(newTs);
-
-        String componentHtml = RenderComponentHtml(elementNew, bindings, actions);
-        PsiFile newHtml = PsiFileFactory.getInstance(project)
-                .createFileFromText(componentName + ".component.html", Angular2HtmlLanguage.INSTANCE, componentHtml);
-        containingDirectory.add(newHtml);
-
-        CodeStyleManager.getInstance(project).reformat(newHtml);
-        CodeStyleManager.getInstance(project).reformat(newTs);
-        Module module = ModuleUtil.findModuleForFile(containingFile);
-        if (module != null) {
-            ModuleRootModificationUtil.addContentRoot(module, newHtml.getVirtualFile());
-            ModuleRootModificationUtil.addContentRoot(module, containingDirectory.getVirtualFile().getPath() + "\\" + newTs.getName());
-        }
-        VirtualFileManager.getInstance().asyncRefresh(null);
     }
 
     @NotNull
@@ -165,7 +184,7 @@ public class RefactorHelper {
         }
     }
 
-    private String RenderComponentHtml(PsiElement element, Set<AngularBinding> bindings, Set<AngularEvent> actions) {
+    private String RenderComponentHtml(List<PsiElement> element, Set<AngularBinding> bindings, Set<AngularEvent> actions) {
         bindings.stream().flatMap(angularBinding -> angularBinding.callExpressions.stream()).forEach(jsCallExpression -> {
             JSElementFactory.replaceExpression(jsCallExpression, AngularBinding.callExpressionFieldName(jsCallExpression));
         });
@@ -177,7 +196,7 @@ public class RefactorHelper {
             XmlAttribute attribute = XmlElementFactory.getInstance(project).createAttribute(attributeName, value, angular2WayBinding.bananaBoxBinding);
             angular2WayBinding.bananaBoxBinding.getParent().addAfter(attribute, angular2WayBinding.bananaBoxBinding);
         });
-        return element.getText();
+        return element.stream().map(PsiElement::getText).collect(Collectors.joining(""));
     }
 
     @NotNull
@@ -218,10 +237,6 @@ public class RefactorHelper {
         jsBuilder.append("=new EventEmitter<").append(inputField.fieldType).append(">()");
         jsBuilder.append(";\n");
         AddJsInput(jsBuilder, inputField);
-    }
-
-    private boolean InRefactorScope(PsiElement element) {
-        return rootElement.getTextRange().contains(element.getTextOffset());
     }
 
     private void AddJsEvents(Set<AngularEvent> callExpressions, StringBuilder jsBuilder) {

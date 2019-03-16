@@ -1,11 +1,10 @@
 <idea-plugin>
     <id>com.khahn.angular-extract-component</id>
     <name>Angular Extract Component</name>
-    <vendor email="support@yourcompany.com" url="http://www.yourcompany.com">YourCompany</vendor>
+    <vendor email="hahn.kev@gmail.com" url="http://github.com/hahn-kev/">khahn</vendor>
 
     <description><![CDATA[
-    Enter short description for your plugin here.<br>
-    <em>most HTML tags may be used</em>
+    Extracts HTML into a new angular component
     ]]></description>
 
     <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
@@ -16,11 +15,12 @@
     <depends>com.intellij.css</depends>
 
     <extensions defaultExtensionNs="com.intellij">
+        <lang.refactoringSupport language="Angular2Html" implementationClass="CustomRefactoringSupport"/>
     </extensions>
 
     <actions>
-        <action id="ExtractComponentAction" class="ExtractComponentAction" text="Extract Component" description="Extract some Angular HTML to a new Component">
-            <add-to-group group-id="RefactoringMenu" anchor="last"/>
-        </action>
+        <!--<action id="ExtractComponentAction" class="ExtractComponentAction" text="Extract Component" description="Extract some Angular HTML to a new Component">-->
+            <!--<add-to-group group-id="RefactoringMenu" anchor="last"/>-->
+        <!--</action>-->
     </actions>
 </idea-plugin>
