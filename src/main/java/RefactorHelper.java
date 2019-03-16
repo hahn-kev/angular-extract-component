@@ -1,3 +1,4 @@
+import com.google.common.base.CaseFormat;
 import com.intellij.lang.javascript.TypeScriptFileType;
 import com.intellij.lang.javascript.psi.JSElementFactory;
 import com.intellij.openapi.module.Module;
@@ -5,6 +6,7 @@ import com.intellij.openapi.module.ModuleUtil;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.ModuleRootModificationUtil;
 import com.intellij.openapi.ui.Messages;
+import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.psi.*;
 import com.intellij.psi.codeStyle.CodeStyleManager;
@@ -39,8 +41,9 @@ public class RefactorHelper {
 
     public void DoRefactor() {
         if (rootElements.length == 0) return;
-        String componentName = Messages.showInputDialog(project, "Component name", "Component Name", Messages.getQuestionIcon(), "test", null);
-        if (componentName == null) return;
+        String componentNameCamelCase = Messages.showInputDialog(project, "Component name (in upper camel case)", "Component Name", Messages.getQuestionIcon());
+        if (componentNameCamelCase == null) return;
+        componentNameCamelCase = StringUtil.capitalize(componentNameCamelCase);
 
         PsiFile containingFile = rootElements[0].getContainingFile();
         PsiDirectory containingDirectory = containingFile.getContainingDirectory();
@@ -56,18 +59,17 @@ public class RefactorHelper {
             VisitElement(elementNew, bindings, actions);
         }
 
-
-        StringBuilder htmlBuilder = InvokeTemplate(componentName, bindings, actions);
+        String componentHyphen = CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_HYPHEN, componentNameCamelCase);
+        StringBuilder htmlBuilder = InvokeTemplate(componentHyphen, bindings, actions);
         CleanupOtherElements();
         rootElements[0].replace(XmlElementFactory.getInstance(project).createTagFromText(htmlBuilder.toString(), Angular2HtmlLanguage.INSTANCE));
-
-        StringBuilder jsBuilder = RenderComponentJs(componentName, bindings, actions);
-        PsiFile newTs = PsiFileFactory.getInstance(project).createFileFromText(componentName + ".component.ts", TypeScriptFileType.INSTANCE, jsBuilder.toString());
+        StringBuilder jsBuilder = RenderComponentJs(componentNameCamelCase, componentHyphen, bindings, actions);
+        PsiFile newTs = PsiFileFactory.getInstance(project).createFileFromText(componentHyphen + ".component.ts", TypeScriptFileType.INSTANCE, jsBuilder.toString());
         containingDirectory.add(newTs);
 
         String componentHtml = RenderComponentHtml(newElements, bindings, actions);
         PsiFile newHtml = PsiFileFactory.getInstance(project)
-                .createFileFromText(componentName + ".component.html", Angular2HtmlLanguage.INSTANCE, componentHtml);
+                .createFileFromText(componentHyphen + ".component.html", Angular2HtmlLanguage.INSTANCE, componentHtml);
         containingDirectory.add(newHtml);
 
         CodeStyleManager.getInstance(project).reformat(newHtml);
@@ -200,7 +202,7 @@ public class RefactorHelper {
     }
 
     @NotNull
-    private StringBuilder RenderComponentJs(String componentName, Set<AngularBinding> bindings, Set<AngularEvent> events) {
+    private StringBuilder RenderComponentJs(String componentNameCamelCase, String componentHyphen, Set<AngularBinding> bindings, Set<AngularEvent> events) {
         StringBuilder jsBuilder = new StringBuilder();
         jsBuilder.append("import{Component");
 
@@ -208,8 +210,8 @@ public class RefactorHelper {
         if (!events.isEmpty() || bindings.stream().anyMatch(AngularBinding::isTwoWayBinding))
             jsBuilder.append(",Output,EventEmitter");
         jsBuilder.append("}from'@angular/core';\n");
-        jsBuilder.append("@Component({selector:'app-").append(componentName).append("', templateUrl:'./").append(componentName).append(".component.html',styles:[]})\n");
-        jsBuilder.append("export class ").append(componentName).append("Component{\n");
+        jsBuilder.append("@Component({selector:'app-").append(componentHyphen).append("', templateUrl:'./").append(componentHyphen).append(".component.html',styles:[]})\n");
+        jsBuilder.append("export class ").append(componentNameCamelCase).append("Component{\n");
         AddJsInputReferences(bindings, jsBuilder);
         AddJsEvents(events, jsBuilder);
         jsBuilder.append("}");
