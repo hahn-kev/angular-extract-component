@@ -15,10 +15,10 @@ import org.angular2.lang.expr.psi.Angular2Interpolation;
 import org.angular2.lang.expr.psi.Angular2RecursiveVisitor;
 import org.angular2.lang.expr.psi.Angular2TemplateBinding;
 import org.angular2.lang.html.Angular2HtmlLanguage;
+import org.angular2.lang.html.psi.Angular2HtmlBananaBoxBinding;
 import org.angular2.lang.html.psi.Angular2HtmlEvent;
 import org.angular2.lang.html.psi.Angular2HtmlPropertyBinding;
 import org.angular2.lang.html.psi.Angular2HtmlRecursiveElementVisitor;
-import org.angular2.lang.html.psi.impl.Angular2HtmlBananaBoxBindingImpl;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -92,7 +92,7 @@ public class RefactorHelper {
     private void VisitElement(PsiElement elementNew, Set<AngularBinding> bindings, Set<AngularEvent> actions) {
         elementNew.acceptChildren(new Angular2HtmlRecursiveElementVisitor() {
             @Override
-            public void visitBananaBoxBinding(Angular2HtmlBananaBoxBindingImpl bananaBoxBinding) {
+            public void visitBananaBoxBinding(Angular2HtmlBananaBoxBinding bananaBoxBinding) {
                 bindings.add(new Angular2WayBinding(bananaBoxBinding));
             }
 

@@ -1,10 +1,10 @@
 plugins {
     id 'java'
-    id 'org.jetbrains.intellij' version '0.4.5'
+    id 'org.jetbrains.intellij' version '0.4.8'
 }
 
 group 'com.khahn'
-version '1.0'
+version '1.1'
 
 sourceCompatibility = 1.8
 
@@ -18,15 +18,27 @@ repositories {
 dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.12'
 }
-
+buildSearchableOptions.enabled = false
 intellij {
-    version 'RD-2018.3.4'
+    version 'RD-2019.1'
     plugins = ['JavaScriptLanguage', 'AngularJS', 'CSS']
     pluginName 'Extract Angular Component'
     instrumentCode false
+    updateSinceUntilBuild false
+    
+    publishPlugin {
+        token intellijPublishToken
+    }
 }
 
 patchPluginXml {
+    sinceBuild '191.*'
+    pluginDescription """
+        Extracts HTML into a new angular component</br>
+        To invoke highlight some angular HTML open the refactor menu
+        then open the Extract menu and click `Delegate...`
+      """
     changeNotes """
-      Initial release"""
+        Add support for latest IDE versions
+      """
 }

@@ -116,7 +116,7 @@ public class AngularBinding {
         }
         if (psiReference instanceof TypeScriptField) {
             TypeScriptField typeScriptField = (TypeScriptField) psiReference;
-            JSType type = typeScriptField.getType();
+            JSType type = typeScriptField.getJSType();
             return new InputField(typeScriptField.getName(), type == null ? null : type.toString(), referenceExpression.getText(), isTwoWayBinding);
         }
 
