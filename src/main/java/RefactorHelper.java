@@ -5,7 +5,6 @@ import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleUtil;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.ModuleRootModificationUtil;
-import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.psi.*;
@@ -39,10 +38,10 @@ public class RefactorHelper {
         this.rootElements = rootElements;
     }
 
-    public void DoRefactor() {
+    public void DoRefactor(String componentNameCamelCase) {
         if (rootElements.length == 0) return;
-        String componentNameCamelCase = Messages.showInputDialog(project, "Component name (in upper camel case)", "Component Name", Messages.getQuestionIcon());
-        if (componentNameCamelCase == null) return;
+
+
         componentNameCamelCase = StringUtil.capitalize(componentNameCamelCase);
 
         PsiFile containingFile = rootElements[0].getContainingFile();

@@ -4,7 +4,7 @@ plugins {
 }
 
 group 'com.khahn'
-version '1.1'
+version '1.2'
 
 sourceCompatibility = 1.8
 
@@ -17,6 +17,8 @@ repositories {
 
 dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.12'
+    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.9'
+
 }
 buildSearchableOptions.enabled = false
 intellij {
@@ -32,13 +34,14 @@ intellij {
 }
 
 patchPluginXml {
-    sinceBuild '191.*'
+    sinceBuild '191'
     pluginDescription """
         Extracts HTML into a new angular component</br>
         To invoke highlight some angular HTML open the refactor menu
         then open the Extract menu and click `Delegate...`
       """
     changeNotes """
-        Add support for latest IDE versions
+        Fixed missing apache commons error
+        Add support for latest IDE versions        
       """
 }

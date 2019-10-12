@@ -2,6 +2,7 @@ import com.intellij.openapi.actionSystem.DataContext;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.Messages;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.refactoring.RefactoringActionHandler;
@@ -83,8 +84,10 @@ public class ExtractComponentHandler implements RefactoringActionHandler, Elemen
 
     @Override
     public void invoke(@NotNull Project project, @NotNull PsiElement[] elements, DataContext dataContext) {
+        String componentNameCamelCase = Messages.showInputDialog(project, "Component name (in upper camel case)", "Component Name", Messages.getQuestionIcon());
+        if (componentNameCamelCase == null) return;
         WriteCommandAction.runWriteCommandAction(project, () -> {
-            new RefactorHelper(project, elements).DoRefactor();
+            new RefactorHelper(project, elements).DoRefactor(componentNameCamelCase);
         });
     }
 }
